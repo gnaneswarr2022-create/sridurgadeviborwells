@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signup - Sri Durga Devi Borewells</title>
+  <style>
+    /* === Blue Background + overlay === */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      /* solid blue background like login page */
+      background: linear-gradient(135deg, #004aad, #005fbb);
+      color: #fff;
+      position: relative;
+    }
+
+    /* Header bar */
+    .page-header {
+      position: absolute;
+      top: 0; left: 0; width: 100%;
+      background-color: rgba(0, 74, 173, 0.9);
+      color: white;
+      padding: 15px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      z-index: 20;
+    }
+    .page-header a {
+      text-decoration: none;
+      color: white;
+    }
+
+    /* Glass card container */
+    .glass-container {
+      position: relative;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%; max-width: 350px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      opacity: 0;
+      transform: translateY(30px);
+      margin-top: 80px; /* below header */
+      animation: fadeInUp 0.6s forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h2 {
+      font-size: 1.7em;
+      margin-bottom: 18px;
+      font-weight: 700;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95em;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    select {
+      appearance: none;
+      cursor: pointer;
+    }
+    select option {
+      background: rgba(0, 0, 0, 0.85);
+      color: #fff;
+    }
+
+    ::placeholder { color: rgba(255, 255, 255, 0.8); }
+    input:focus, select:focus {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: #fff;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 12px;
+      background: #f1c40f; /* yellow */
+      border: none;
+      border-radius: 10px;
+      color: #004aad;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    button[type="submit"]:hover {
+      background: #ffda44;
+      transform: translateY(-2px);
+    }
+
+    a {
+      color: #f1c40f;
+      font-weight: bold;
+      text-decoration: none;
+    }
+    a:hover { color: #f39c12; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <a href="landing.html">Sri Durga Devi Borewells</a>
+  </header>
+
+  <div class="glass-container">
+    <h2>Signup</h2>
+    <form id="signupForm">
+      <select id="role" required>
+        <option value="" disabled selected>-- Select Role --</option>
+        <option value="customer">Customer</option>
+        <option value="admin">Admin</option>
+      </select>
+      <input type="text" id="name" placeholder="Name" required>
+      <input type="tel" id="phone" placeholder="Phone Number" pattern="[0-9]{10}" required>
+      <input type="password" id="password" placeholder="Password" minlength="6" required>
+      <input type="password" id="confirmPassword" placeholder="Confirm Password" minlength="6" required>
+      <div id="adminKeySection" class="hidden">
+        <input type="password" id="secretKey" placeholder="Admin Secret Key">
+      </div>
+      <button type="submit">Signup</button>
+    </form>
+    <p>Already have an account? <a href="login.html">Login</a></p>
+  </div>
+
+  <script>
+    const roleSelect = document.getElementById("role");
+    const adminKeySection = document.getElementById("adminKeySection");
+    const secretKeyInput = document.getElementById("secretKey");
+
+    roleSelect.addEventListener("change", (e) => {
+      if (e.target.value === "admin") {
+        adminKeySection.classList.remove("hidden");
+        secretKeyInput.required = true;
+      } else {
+        adminKeySection.classList.add("hidden");
+        secretKeyInput.required = false;
+        secretKeyInput.value = "";
+      }
+    });
+
+    document.getElementById("signupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const role = roleSelect.value;
+      const name = document.getElementById("name").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+      const secretKey = secretKeyInput.value.trim();
+
+      if (password !== confirmPassword) {
+        alert("❌ Passwords do not match!");
+        return;
+      }
+
+      const url = role === "admin"
+        ? "https://sridurgadeviborewells.onrender.com/api/admin/signup"
+        : "https://sridurgadeviborewells.onrender.com/api/customer/signup";
+
+      const bodyData = role === "admin"
+        ? { name, phone, password, secretKey }
+        : { name, phone, password };
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyData)
+        });
+
+        let data = {};
+        if (res.headers.get("content-type")?.includes("application/json")) {
+          data = await res.json();
+        }
+
+        if (res.ok) {
+          alert("✅ Signup successful! Please login.");
+          window.location.href = "login.html";
+        } else {
+          alert("⚠️ " + (data.message || "Signup failed."));
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        alert("⚠️ Error during signup. Please try again.");
+      }
+    });
+  </script>
+</body>
+</html>

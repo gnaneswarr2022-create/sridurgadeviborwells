@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bills</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f6f9; color: #333; margin: 0; padding: 0; }
+    .container { max-width: 800px; margin: 50px auto; padding: 20px; text-align: center; }
+    h1 { color: #003366; margin-bottom: 20px; }
+    .bill-list { display: grid; gap: 20px; }
+    .bill-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); border-left: 5px solid #007bff; text-align: left; }
+    .bill-card h3 { margin-top: 0; color: #007bff; }
+    .bill-card p { margin: 5px 0; }
+    .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; color: white; display: inline-block; }
+    .btn.back-btn { background-color: #6c757d; margin-bottom: 20px; }
+    .btn.download-btn { background-color: #28a745; margin-top: 10px; }
+    .bill-details-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .bill-details-table th, .bill-details-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    .bill-details-table th { background-color: #f2f2f2; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+  <div id="customerHeader"></div>
+  <div class="container">
+    <a href="dashboard_customer.html" class="btn back-btn">← Back to Dashboard</a>
+    <h1>My Bills</h1>
+    <div class="bill-list" id="billList">
+      <p>Loading bills...</p>
+    </div>
+  </div>
+  <div id="customerFooter"></div>
+
+  <script>
+    // Load header & footer
+    async function loadComponent(id, file) {
+      try {
+        const res = await fetch(file);
+        if (!res.ok) throw new Error(`Failed to load ${file}`);
+        const html = await res.text();
+        document.getElementById(id).innerHTML = html;
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    loadComponent("customerHeader", "../partials/customer_header.html");
+    loadComponent("customerFooter", "../partials/customer_footer.html");
+
+    // Fetch bills
+    async function fetchBills() {
+      const customerId = localStorage.getItem("customerId");
+      const customerName = localStorage.getItem("customerName") || "Customer";
+      const list = document.getElementById("billList");
+
+      if (!customerId) {
+        list.innerHTML = "<p>Please log in to view your bills.</p>";
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://sridurgadeviborewells.onrender.com/api/customer/${customerId}/bills`);
+        if (!res.ok) throw new Error("Failed to fetch bills");
+        const bills = await res.json();
+
+        list.innerHTML = "";
+
+        if (!Array.isArray(bills) || bills.length === 0) {
+          list.innerHTML = "<p>You have no bills yet.</p>";
+          return;
+        }
+
+        bills.forEach(bill => {
+          const card = document.createElement("div");
+          card.className = "bill-card";
+          const billDate = bill.date ? new Date(bill.date).toLocaleDateString() : "N/A";
+          const safeBill = encodeURIComponent(JSON.stringify(bill));
+
+          let itemsHtml = "";
+          if (bill.items && Array.isArray(bill.items)) {
+            itemsHtml = `
+              <table class="bill-details-table">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>Description</th>
+                    <th>Feet/Qty</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${bill.items.map((item, index) => `
+                    <tr>
+                      <td>${index + 1}</td>
+                      <td>${item.description || "N/A"}</td>
+                      <td>${item.feet || 0}</td>
+                      <td>₹${item.rate || 0}</td>
+                      <td>₹${item.amount || 0}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          }
+
+          card.innerHTML = `
+            <h3>Bill for Booking ID: ${bill.bookingId || "N/A"}</h3>
+            <p><strong>Date:</strong> ${billDate}</p>
+            ${itemsHtml}
+            <p style="text-align: right; margin-top: 10px;"><strong>Total Amount: ₹${bill.totalAmount || 0}</strong></p>
+            <button class="btn download-btn" onclick='downloadBill("${safeBill}", "${customerName}")'>Download Bill</button>
+          `;
+          list.appendChild(card);
+        });
+      } catch (error) {
+        console.error("Error fetching bills:", error);
+        list.innerHTML = "<p>Failed to load bills.</p>";
+      }
+    }
+
+    // Download bill as PDF
+    function downloadBill(encodedBill, customerName) {
+      const billData = JSON.parse(decodeURIComponent(encodedBill));
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const invoiceDate = billData.date ? new Date(billData.date).toLocaleDateString() : new Date().toLocaleDateString();
+
+      // Header
+      doc.setFontSize(20);
+      doc.text("SRI DURGA DEVI BORE WELLS", 105, 20, { align: "center" });
+      doc.setFontSize(10);
+      doc.text("V. Gopala Rao, P. Srinivasa Rao", 10, 28);
+      doc.text("9553553850, 9441340735", 10, 33);
+      doc.text(`Date: ${invoiceDate}`, 200 - 10, 15, { align: "right" });
+
+      // Customer details
+      doc.setFontSize(12);
+      doc.text("------------------------------------------------------------------------------------------------", 10, 40);
+      doc.text(`Customer Name: ${customerName}`, 10, 48);
+      doc.text(`Customer ID: ${billData.customerId || "N/A"}`, 10, 53);
+      doc.text("------------------------------------------------------------------------------------------------", 10, 60);
+
+      // Bill items
+      const tableColumn = ["No.", "Description", "Feet/Qty", "Rate", "Amount"];
+      const tableRows = (billData.items || []).map((item, index) => [
+        index + 1,
+        item.description || "N/A",
+        item.feet || 0,
+        `₹${item.rate || 0}`,
+        `₹${item.amount || 0}`
+      ]);
+
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 65
+      });
+
+      // Total & footer
+      const finalY = doc.autoTable.previous.finalY;
+      doc.text(`Grand Total: ₹${billData.totalAmount || 0}`, 200 - 10, finalY + 10, { align: "right" });
+      doc.text(`Customer Signature`, 10, finalY + 30);
+      doc.text(`Admin Signature`, 200 - 10, finalY + 30, { align: "right" });
+      doc.text("No sand, gravel, or green stones were added in the borewell", 10, finalY + 50);
+      doc.text("4 gunny bags, one drum of water required", 10, finalY + 55);
+
+      doc.save(`bill_${billData.customerId || "NA"}_${invoiceDate}.pdf`);
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchBills);
+  </script>
+</body>
+</html>

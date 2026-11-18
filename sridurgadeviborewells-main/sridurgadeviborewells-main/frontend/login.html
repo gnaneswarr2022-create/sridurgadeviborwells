@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Sri Durga Devi Borewells</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js" defer></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #004aad, #007bff);
+      position: relative;
+      color: #fff;
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.15);
+      z-index: 1;
+    }
+
+    /* header bar */
+    .page-header {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      background-color: rgba(0, 74, 173, 0.9);
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 20;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .page-header .brand {
+      font-size: 1.6rem;
+      font-weight: bold;
+      color: #f1c40f;
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+    .page-header .brand:hover { color: #fff; }
+    .page-header .header-right {
+      font-size: 1rem;
+    }
+
+    /* glass login card */
+    .glass-container {
+      position: relative;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 50px 60px;
+      width: 95%; max-width: 500px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      text-align: center;
+      opacity: 0; /* for animation */
+      transform: translateY(30px);
+      margin-top: 80px;
+    }
+
+    h2 {
+      font-size: 2.4em;
+      margin-bottom: 25px;
+      font-weight: 700;
+    }
+
+    input[type="tel"], input[type="password"] {
+      width: 100%;
+      padding: 18px;
+      margin-bottom: 25px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1.1em;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    ::placeholder { color: rgba(255, 255, 255, 0.8); }
+    input:focus {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: #f1c40f;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 18px;
+      background: #f1c40f;
+      border: none;
+      border-radius: 12px;
+      color: #004aad;
+      font-size: 1.2em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    button[type="submit"]:hover {
+      background: #fff;
+      color: #004aad;
+      transform: translateY(-2px);
+    }
+
+    a {
+      color: #f1c40f;
+      text-decoration: none;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+    a:hover { color: #fff; }
+
+    label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 25px;
+      font-size: 1em;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    label input {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <a href="landing.html" class="brand">Sri Durga Devi Borewells</a>
+    <div class="header-right">
+      <!-- Optional: contact number or link -->
+      <span> </span>
+    </div>
+  </header>
+
+  <div class="glass-container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="tel" id="phone" placeholder="Mobile Number" pattern="[0-9]{10}" required>
+      <input type="password" id="password" placeholder="Password" minlength="6" required>
+      <label>
+        <input type="checkbox" required> Accept all terms and conditions
+      </label>
+      <button type="submit">Login</button>
+    </form>
+    <p>Don’t have an account? <a href="signup.html">Signup</a></p>
+    <p><a href="#" id="forgotPasswordLink">Forgot Password?</a></p>
+  </div>
+
+  <script>
+    // Animate the card on load
+    document.addEventListener('DOMContentLoaded', () => {
+      gsap.to(".glass-container", { opacity: 1, y: 0, duration: 1, ease: "power3.out", delay: 0.3 });
+    });
+
+    async function parseJSON(res) {
+      try { return await res.json(); }
+      catch { return { message: "Invalid server response" }; }
+    }
+
+    // Handle Login
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const phone = document.getElementById("phone").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        // Try Admin Login
+        let res = await fetch("https://sridurgadeviborewells.onrender.com/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, password })
+        });
+        let data = await parseJSON(res);
+
+        if (res.ok) {
+          localStorage.setItem("adminId", data.adminId);
+          localStorage.setItem("adminName", data.name);
+          localStorage.setItem("adminPhone", data.phone);
+          window.location.href = "admin/main/dashboard_admin.html";
+          return;
+        }
+
+        // Try Customer Login
+        res = await fetch("https://sridurgadeviborewells.onrender.com/api/customer/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone, password })
+        });
+        data = await parseJSON(res);
+
+        if (res.ok) {
+          localStorage.setItem("customerId", data.customerId);
+          localStorage.setItem("customerName", data.name);
+          localStorage.setItem("customerPhone", data.phone);
+          window.location.href = "customer/main/dashboard_customer.html";
+        } else {
+          alert("❌ " + (data.message || "Login failed."));
+        }
+      } catch (err) {
+        console.error("Login error:", err);
+        alert("⚠️ Server error, please try again later.");
+      }
+    });
+
+    // Handle Forgot Password
+    document.getElementById("forgotPasswordLink").addEventListener("click", async (e) => {
+      e.preventDefault();
+      const phone = prompt("Enter your registered phone:");
+      const newPassword = prompt("Enter new password (min 6 chars):");
+
+      if (!phone || !newPassword || newPassword.length < 6) {
+        alert("❌ Please provide valid phone and password (min 6 chars).");
+        return;
+      }
+
+      try {
+        // Try Customer Reset
+        let res = await fetch("https://sridurgadeviborewells.onrender.com/api/customer/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: phone.trim(), newPassword })
+        });
+
+        if (!res.ok) {
+          // Try Admin Reset
+          res = await fetch("https://sridurgadeviborewells.onrender.com/api/admin/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone: phone.trim(), newPassword })
+          });
+        }
+
+        if (res.ok) {
+          alert("✅ Password reset successful! Try login again.");
+        } else {
+          alert("❌ Failed to reset password. Check your phone number.");
+        }
+      } catch (err) {
+        console.error("Forgot password error:", err);
+        alert("⚠️ Error resetting password. Try again.");
+      }
+    });
+  </script>
+</body>
+</html>

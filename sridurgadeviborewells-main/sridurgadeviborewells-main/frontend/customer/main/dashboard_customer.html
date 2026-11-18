@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customer Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .main-dashboard { flex: 1; padding: 20px; }
+    .main-dashboard h2 { color: #003366; margin-bottom: 15px; font-size: 28px; }
+    .main-dashboard p.welcome-text { font-size: 18px; color: #555; margin-bottom: 25px; }
+
+    .dashboard-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .dashboard-card {
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    .dashboard-card h3 { margin-top: 10px; color: #003366; }
+    .dashboard-card .icon { font-size: 36px; color: #2980b9; }
+
+    .summary-cards { display: grid; gap: 15px; }
+    .summary-card {
+      background: #ffffff;
+      padding: 20px;
+      border-left: 5px solid #003366;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .summary-card h3 { margin-bottom: 8px; color: #003366; }
+
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid #ccc;
+      border-top: 3px solid #003366;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 6px;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    .retry-btn {
+      margin-top: 8px;
+      padding: 6px 14px;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      display: none;
+    }
+    .retry-btn:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <div id="customerHeader"></div>
+
+  <main class="main-dashboard">
+    <h2>Welcome <span id="customerNameMain">Customer</span>!</h2>
+    <p class="welcome-text">Here's a quick overview of your account.</p>
+
+    <div class="dashboard-cards">
+      <div class="dashboard-card" onclick="bookBore()">
+        <div class="icon">💧</div>
+        <h3>Book Borewell</h3>
+      </div>
+      <div class="dashboard-card" onclick="openBookings()">
+        <div class="icon">🗓️</div>
+        <h3>My Bookings</h3>
+      </div>
+      <div class="dashboard-card" onclick="openBills()">
+        <div class="icon">🧾</div>
+        <h3>My Bills</h3>
+      </div>
+      <div class="dashboard-card" onclick="openReviews()">
+        <div class="icon">⭐</div>
+        <h3>My Reviews</h3>
+      </div>
+    </div>
+
+    <div class="summary-cards">
+      <div class="summary-card">
+        <h3>Latest Booking</h3>
+        <div id="bookingInfo"><span class="loader"></span> Loading latest booking...</div>
+        <button id="retryBooking" class="retry-btn" onclick="fetchDashboardData()">Retry</button>
+      </div>
+      <div class="summary-card">
+        <h3>Pending Bills</h3>
+        <p id="billInfo">No bills generated yet.</p>
+      </div>
+    </div>
+  </main>
+
+  <div id="customerFooter"></div>
+
+  <script>
+    const loadComponent = async (id, file) => {
+      try {
+        const res = await fetch(file);
+        if (!res.ok) throw new Error("Failed to load " + file);
+        const html = await res.text();
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      } catch (error) {
+        console.error("Component load error:", error);
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadComponent("customerHeader", "../partials/customer_header.html");
+      loadComponent("customerFooter", "../partials/customer_footer.html");
+      fetchDashboardData();
+    });
+
+    async function fetchDashboardData() {
+      const customerName = localStorage.getItem("customerName") || "Customer";
+      const customerId = localStorage.getItem("customerId");
+
+      const nameMainEl = document.getElementById("customerNameMain");
+      if (nameMainEl) nameMainEl.textContent = customerName;
+
+      const headerNameEl = document.getElementById("customerName");
+      if (headerNameEl) headerNameEl.textContent = `Welcome, ${customerName}!`;
+
+      const bookingInfoDiv = document.getElementById("bookingInfo");
+      const retryBtn = document.getElementById("retryBooking");
+
+      if (!bookingInfoDiv) return;
+
+      if (!customerId) {
+        bookingInfoDiv.innerHTML = "<p>Please log in to view your latest booking.</p>";
+        if (retryBtn) retryBtn.style.display = "none";
+        return;
+      }
+
+      if (retryBtn) retryBtn.style.display = "none";
+      bookingInfoDiv.innerHTML = `<span class="loader"></span> Loading latest booking...`;
+
+      try {
+        const res = await fetch(`/api/customer/${customerId}/latest-booking`);
+        if (res.ok) {
+          const booking = await res.json();
+          if (booking && booking.date) {
+            bookingInfoDiv.innerHTML = `
+              <p><strong>Type:</strong> ${booking.type}</p>
+              <p><strong>Date:</strong> ${new Date(booking.date).toLocaleDateString()}</p>
+              <p><strong>Status:</strong> ${booking.status}</p>
+            `;
+          } else {
+            bookingInfoDiv.innerHTML = `<p>No recent bookings found.</p>`;
+          }
+        } else {
+          bookingInfoDiv.innerHTML = `<p>No recent bookings found.</p>`;
+        }
+      } catch (error) {
+        console.error("Error fetching latest booking:", error);
+        bookingInfoDiv.innerHTML = `<p>Error loading booking info.</p>`;
+        if (retryBtn) retryBtn.style.display = "inline-block";
+      }
+    }
+
+    function bookBore() { window.location.href = "bookborewell.html"; }
+    function openBookings() { window.location.href = "mybookings.html"; }
+    function openBills() { window.location.href = "my_bills.html"; }
+    function openReviews() { window.location.href = "review_list.html"; }
+  </script>
+</body>
+</html>

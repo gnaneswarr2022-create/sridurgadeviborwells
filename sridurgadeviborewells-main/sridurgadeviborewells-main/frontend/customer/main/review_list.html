@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Reviews</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #003366;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .review-card {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+    }
+    .review-card h3 {
+      margin: 0;
+      font-size: 1.2em;
+      color: #007bff;
+    }
+    .review-card p {
+      margin: 5px 0;
+    }
+    .rating {
+      color: #f1c40f;
+      font-size: 1.2em;
+    }
+    .btn-group {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      color: white;
+      text-decoration: none;
+      font-size: 16px;
+    }
+    .add-review-btn {
+      background-color: #28a745;
+    }
+    .back-btn {
+      background-color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <div id="customerHeader"></div>
+
+  <div class="container">
+    <a href="dashboard_customer.html" class="btn back-btn">← Back to Dashboard</a>
+    <h1>My Reviews</h1>
+    <div id="reviewsList">
+      <p>Loading reviews...</p>
+    </div>
+    <div class="btn-group">
+      <a href="review.html" class="btn add-review-btn">Add New Review</a>
+    </div>
+  </div>
+
+  <div id="customerFooter"></div>
+
+  <script>
+    // Load reusable components
+    const loadComponent = async (id, file) => {
+      try {
+        const res = await fetch(file);
+        if (!res.ok) throw new Error(`Failed to load ${file}`);
+        const html = await res.text();
+        document.getElementById(id).innerHTML = html;
+      } catch (error) {
+        console.error("Component load error:", error);
+      }
+    };
+
+    loadComponent("customerHeader", "../partials/customer_header.html");
+    loadComponent("customerFooter", "../partials/customer_footer.html");
+
+    // Fetch reviews from backend
+    async function fetchReviews() {
+      const customerId = localStorage.getItem("customerId");
+      const reviewsList = document.getElementById("reviewsList");
+
+      if (!customerId) {
+        reviewsList.innerHTML = "<p>Please log in to view your reviews.</p>";
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://sridurgadeviborewells.onrender.com/api/customer/${customerId}/reviews`);
+        if (!res.ok) throw new Error("Failed to fetch reviews");
+
+        const reviews = await res.json();
+        reviewsList.innerHTML = "";
+
+        if (reviews.length === 0) {
+          reviewsList.innerHTML = "<p>You have not submitted any reviews yet.</p>";
+          return;
+        }
+
+        reviews.forEach(review => {
+          const card = document.createElement("div");
+          card.className = "review-card";
+          const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+
+          card.innerHTML = `
+            <h3>Booking ID: ${review.bookingId}</h3>
+            <p class="rating">${stars}</p>
+            <p>${review.comment || "No comment provided."}</p>
+            <small>Reviewed on: ${new Date(review.createdAt).toLocaleDateString()}</small>
+          `;
+          reviewsList.appendChild(card);
+        });
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+        reviewsList.innerHTML = "<p>Failed to load reviews.</p>";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchReviews);
+  </script>
+</body>
+</html>

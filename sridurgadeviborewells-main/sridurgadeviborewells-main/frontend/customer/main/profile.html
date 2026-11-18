@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Profile</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 500px;
+      margin: 50px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .profile-pic-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid #007bff;
+      margin: 0 auto 20px;
+      overflow: hidden;
+      background-color: #e9ecef;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .profile-pic-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .profile-pic-container input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .profile-pic-container .edit-icon {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      background-color: #007bff;
+      color: white;
+      border-radius: 50%;
+      padding: 5px;
+      font-size: 1.2em;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 30px;
+      height: 30px;
+    }
+    h1 {
+      color: #003366;
+      margin-bottom: 20px;
+    }
+    .profile-details p {
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    .profile-details strong {
+      color: #555;
+    }
+    .btn-group {
+      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      font-size: 15px;
+    }
+    .edit-btn { background-color: #007bff; }
+    .logout-btn { background-color: #dc3545; }
+  </style>
+</head>
+<body>
+  <div id="customerHeader"></div>
+
+  <div class="container">
+    <div class="profile-pic-container">
+      <img id="profileImage" src="https://via.placeholder.com/120/007bff/ffffff?text=User" alt="Profile Picture">
+      <input type="file" id="profilePicUpload" accept="image/png, image/jpeg, image/jpg">
+      <label for="profilePicUpload" class="edit-icon">&#9998;</label>
+    </div>
+    <h1>Customer Profile</h1>
+    <div class="profile-details">
+      <p><strong>Name:</strong> <span id="profileName">Loading...</span></p>
+      <p><strong>Phone:</strong> <span id="profilePhone">Loading...</span></p>
+      <p><strong>Customer ID:</strong> <span id="profileId">Loading...</span></p>
+    </div>
+    <div class="btn-group">
+      <a href="edit_profile.html" class="btn edit-btn">Edit Profile</a>
+      <button class="btn logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div id="customerFooter"></div>
+
+  <script>
+    const loadComponent = async (id, file) => {
+      try {
+        const res = await fetch(file);
+        if (!res.ok) throw new Error("Failed to load " + file);
+        const html = await res.text();
+        document.getElementById(id).innerHTML = html;
+      } catch (error) {
+        console.error("Component load error:", error);
+      }
+    };
+
+    const fetchProfileData = async () => {
+      const customerId = localStorage.getItem("customerId");
+      if (!customerId) {
+        console.warn("No customerId found in localStorage.");
+        window.location.href = "../../login.html";
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://sridurgadeviborewells.onrender.com/api/customer/profile/${customerId}`);
+        if (!res.ok) throw new Error("Failed to fetch profile");
+        const customer = await res.json();
+
+        document.getElementById("profileName").textContent = customer.name || "N/A";
+        document.getElementById("profilePhone").textContent = customer.phone || "N/A";
+        document.getElementById("profileId").textContent = customer.customerId || "N/A";
+
+        if (customer.profileImage) {
+          document.getElementById("profileImage").src = customer.profileImage;
+        }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+      }
+    };
+
+    const logout = () => {
+      localStorage.clear();
+      window.location.href = "../../login.html";
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadComponent("customerHeader", "../partials/customer_header.html");
+      loadComponent("customerFooter", "../partials/customer_footer.html");
+      fetchProfileData();
+
+      const profilePicUpload = document.getElementById("profilePicUpload");
+      profilePicUpload.addEventListener("change", (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64Image = e.target.result;
+            const customerId = localStorage.getItem("customerId");
+
+            try {
+              const res = await fetch(`https://sridurgadeviborewells.onrender.com/api/customer/profile/image/${customerId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ profileImage: base64Image })
+              });
+
+              const data = await res.json();
+              if (res.ok) {
+                alert("Profile picture updated successfully!");
+                localStorage.setItem("customerProfileImage", base64Image);
+                document.getElementById("profileImage").src = base64Image;
+              } else {
+                alert("Error: " + (data.message || "Failed to upload image."));
+              }
+            } catch (error) {
+              console.error("Upload error:", error);
+              alert("Failed to upload image.");
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
